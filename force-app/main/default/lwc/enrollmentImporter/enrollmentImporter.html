@@ -1,0 +1,92 @@
+<template>
+    <lightning-card title="Enrollment Importer" icon-name="custom:custom19">
+        <div class="slds-p-around_medium">
+            <div class="slds-text-longform slds-m-bottom_medium">
+                <h3 class="slds-text-heading_small slds-m-bottom_small">CSV Format Requirements</h3>
+                <p class="slds-m-bottom_small">Please prepare your CSV file with the following columns:</p>
+                <ul class="slds-m-bottom_small">
+                    <li><strong>first name</strong> - Required, will be automatically formatted to Title Case</li>
+                    <li><strong>last name</strong> - Required, will be automatically formatted to Title Case</li>
+                    <li><strong>email</strong> - Required, must be a valid email format</li>
+                    <li><strong>program id</strong> - Required, must be a valid program ID</li>
+                    <li><strong>phone</strong> - Optional, any format accepted</li>
+                    <li><strong>date of birth</strong> - Optional, format: YYYY-MM-DD</li>
+                    <li><strong>gender</strong> - Optional, if provided must be one of:
+                        <ul class="slds-m-left_medium slds-m-top_x-small">
+                            <li>Male</li>
+                            <li>Female</li>
+                            <li>Non-Binary</li>
+                            <li>Prefer Not To Say</li>
+                        </ul>
+                    </li>
+                    <li><strong>ethnicity</strong> - Optional, if provided must be one of:
+                        <ul class="slds-m-left_medium slds-m-top_x-small">
+                            <li>American Indian or Alaska Native</li>
+                            <li>Asian</li>
+                            <li>Black or African American</li>
+                            <li>Hispanic or Latino</li>
+                            <li>Multiracial</li>
+                            <li>Native Hawaiian or Other Pacific Islander</li>
+                            <li>White</li>
+                            <li>Prefer not to answer</li>
+                        </ul>
+                    </li>
+                    <li><strong>job corp id</strong> - Optional</li>
+                    <li><strong>enrollment start date</strong> - Optional, format: YYYY-MM-DD (defaults to today's date if not provided)</li>
+                    <li><strong>enrollment end date</strong> - Optional, format: YYYY-MM-DD</li>
+                    <li><strong>dismissal reason</strong> - Optional, required if end date is provided</li>
+                </ul>
+                <p class="slds-text-color_weak">Note: For active enrollments, leave the end date and dismissal reason blank. For completed enrollments, both end date and dismissal reason are required.</p>
+            </div>
+
+            <lightning-file-upload
+                label="Upload CSV File"
+                accept={acceptedFormats}
+                record-id={recordId}
+                onuploadfinished={handleUploadFinished}
+                multiple="false"
+            ></lightning-file-upload>
+
+            <template if:true={showPreview}>
+                <div class="slds-m-top_medium">
+                    <h3 class="slds-text-heading_small">Preview</h3>
+                    <lightning-datatable
+                        key-field="id"
+                        data={previewData}
+                        columns={columns}
+                        hide-checkbox-column="true"
+                    ></lightning-datatable>
+                </div>
+
+                <div class="slds-m-top_medium">
+                    <lightning-button
+                        label="Process Import"
+                        variant="brand"
+                        onclick={handleProcessImport}
+                        disabled={isProcessing}
+                    ></lightning-button>
+                </div>
+            </template>
+
+            <template if:true={showResults}>
+                <div class="slds-m-top_medium">
+                    <h3 class="slds-text-heading_small">Results</h3>
+                    <lightning-datatable
+                        key-field="id"
+                        data={resultsData}
+                        columns={resultsColumns}
+                        hide-checkbox-column="true"
+                    ></lightning-datatable>
+                </div>
+
+                <div class="slds-m-top_medium">
+                    <lightning-button
+                        label="Download Results"
+                        variant="brand"
+                        onclick={handleDownloadResults}
+                    ></lightning-button>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template> 

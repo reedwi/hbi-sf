@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <classAccesses>
+        <apexClass>EnrollmentImporterController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <description>Permission set for Enrollment Importer access</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Enrollment Importer Access</label>
+    <tabSettings>
+        <tab>EnrollmentImporter</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+</PermissionSet> 
