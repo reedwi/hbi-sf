@@ -484,21 +484,27 @@ public with sharing class EnrollmentImporterController {
                     Id contactId = compositeKeyToContactIdMap.get(compositeKey);
                     if (contactId != null) {
                         // Create enrollment
+                        Date startDate = result.get('enrollment start date') != null ? 
+                                      Date.valueOf(result.get('enrollment start date')) : 
+                                      Date.today();
+                                      
                         Enrollment__c enrollment = new Enrollment__c(
                             Name = String.format('{0} {1} - {2} - {3}', 
                                 new List<String>{
                                     String.valueOf(result.get('firstName')),
                                     String.valueOf(result.get('lastName')),
                                     programToNameMap.get(programId),
-                                    result.get('enrollment start date') != null ? 
-                                        String.valueOf(result.get('enrollment start date')) : ''
+                                    String.format('{0}/{1}', 
+                                        new List<String>{
+                                            String.valueOf(startDate.month()).leftPad(2, '0'),
+                                            String.valueOf(startDate.year())
+                                        }
+                                    )
                                 }
                             ),
                             Student__c = contactId,
                             Program__c = programId,
-                            Start_Date__c = result.get('enrollment start date') != null ? 
-                                          Date.valueOf(result.get('enrollment start date')) : 
-                                          Date.today(),
+                            Start_Date__c = startDate,
                             End_Date__c = result.get('enrollment end date') != null ? 
                                          Date.valueOf(result.get('enrollment end date')) : null,
                             Dismissal_Reason__c = String.valueOf(result.get('dismissal reason'))
