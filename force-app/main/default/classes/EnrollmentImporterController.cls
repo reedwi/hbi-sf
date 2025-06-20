@@ -176,6 +176,38 @@ public with sharing class EnrollmentImporterController {
             System.debug(LoggingLevel.INFO, '=== Existing Contacts ===');
             System.debug(LoggingLevel.INFO, 'Contact Map: ' + emailToContactMap);
             
+            // Query existing enrollments for all relevant students
+            Map<String, List<Enrollment__c>> emailToExistingEnrollments = new Map<String, List<Enrollment__c>>();
+            if (!emails.isEmpty()) {
+                // Get all contacts for these emails
+                Map<String, Id> emailToContactId = new Map<String, Id>();
+                for (Contact c : emailToContactMap.values()) {
+                    emailToContactId.put(c.Email.toLowerCase(), c.Id);
+                }
+                Set<Id> contactIds = new Set<Id>(emailToContactId.values());
+                if (!contactIds.isEmpty()) {
+                    for (Enrollment__c enr : [SELECT Id, Student__c, Program__c, Start_Date__c, End_Date__c FROM Enrollment__c WHERE Student__c IN :contactIds]) {
+                        // Find the email for this contact
+                        String foundEmail = null;
+                        for (String em : emailToContactId.keySet()) {
+                            if (emailToContactId.get(em) == enr.Student__c) {
+                                foundEmail = em;
+                                break;
+                            }
+                        }
+                        if (foundEmail != null) {
+                            if (!emailToExistingEnrollments.containsKey(foundEmail)) {
+                                emailToExistingEnrollments.put(foundEmail, new List<Enrollment__c>());
+                            }
+                            emailToExistingEnrollments.get(foundEmail).add(enr);
+                        }
+                    }
+                }
+            }
+
+            // Track new enrollments in this batch by email
+            Map<String, List<Map<String, Object>>> emailToBatchEnrollments = new Map<String, List<Map<String, Object>>>();
+            
             // Process each row
             for (Integer i = 1; i < lines.size(); i++) {
                 Map<String, String> rowData = new Map<String, String>();
@@ -369,6 +401,85 @@ public with sharing class EnrollmentImporterController {
                     System.debug(LoggingLevel.INFO, 'Site ID: ' + siteId);
                     System.debug(LoggingLevel.INFO, 'Found Site School ID: ' + siteSchoolId);
                     
+                    // --- DEDUPLICATION & OVERLAP CHECKS ---
+                    // Gather all enrollments to check: existing (SF) and batch (CSV)
+                    List<Enrollment__c> existingEnrollments = emailToExistingEnrollments.containsKey(emailToLower) ? emailToExistingEnrollments.get(emailToLower) : new List<Enrollment__c>();
+                    List<Map<String, Object>> batchEnrollments = emailToBatchEnrollments.containsKey(emailToLower) ? emailToBatchEnrollments.get(emailToLower) : new List<Map<String, Object>>();
+
+                    Boolean isDuplicate = false;
+                    String duplicateReason = '';
+
+                    // Check against existing enrollments in Salesforce
+                    for (Enrollment__c enr : existingEnrollments) {
+                        // 1. Exact duplicate: same program, start, end
+                        if (enr.Program__c == salesforceProgramId && enr.Start_Date__c == startDate && enr.End_Date__c == endDate) {
+                            isDuplicate = true;
+                            duplicateReason = 'Exact duplicate enrollment (same program, start date, and end date as an existing enrollment).';
+                            break;
+                        }
+                        // 2. Overlap: date ranges overlap
+                        if ((enr.End_Date__c == null || endDate == null || enr.End_Date__c >= startDate) && (endDate == null || enr.Start_Date__c <= endDate)) {
+                            isDuplicate = true;
+                            duplicateReason = 'Overlapping enrollment (date range overlaps with an existing enrollment).';
+                            break;
+                        }
+                        // 3. Multiple active: only block if both are active (no end date)
+                        if (enr.End_Date__c == null && endDate == null) {
+                            isDuplicate = true;
+                            duplicateReason = 'Multiple active enrollments (an existing enrollment and this one both have no end date).';
+                            break;
+                        }
+                    }
+                    // Check against batch enrollments in this CSV
+                    for (Map<String, Object> enr : batchEnrollments) {
+                        Id batchProgramId = (Id)enr.get('programId');
+                        Date batchStart = (Date)enr.get('startDate');
+                        Date batchEnd = (Date)enr.get('endDate');
+                        // 1. Exact duplicate
+                        if (batchProgramId == salesforceProgramId && batchStart == startDate && batchEnd == endDate) {
+                            isDuplicate = true;
+                            duplicateReason = 'Exact duplicate enrollment in this import batch (same program, start date, and end date).';
+                            break;
+                        }
+                        // 2. Overlap
+                        if ((batchEnd == null || endDate == null || batchEnd >= startDate) && (endDate == null || batchStart <= endDate)) {
+                            isDuplicate = true;
+                            duplicateReason = 'Overlapping enrollment in this import batch (date range overlaps with another enrollment in this file).';
+                            break;
+                        }
+                        // 3. Multiple active: only block if both are active (no end date)
+                        if (batchEnd == null && endDate == null) {
+                            isDuplicate = true;
+                            duplicateReason = 'Multiple active enrollments in this import batch (another enrollment in this file and this one both have no end date).';
+                            break;
+                        }
+                    }
+                    if (isDuplicate) {
+                        results.add(new Map<String, Object>{
+                            'rowNumber' => i,
+                            'status' => 'Error',
+                            'message' => duplicateReason,
+                            'firstName' => firstName,
+                            'lastName' => lastName,
+                            'email' => email,
+                            'contactId' => null,
+                            'enrollmentId' => null,
+                            'originalProgramId' => rowData.get('program id'),
+                            'programName' => programToNameMap.get(rowData.get('program id'))
+                        });
+                        continue;
+                    }
+                    // Add this enrollment to the batch tracker for future rows
+                    Map<String, Object> batchEnr = new Map<String, Object>{
+                        'programId' => salesforceProgramId,
+                        'startDate' => startDate,
+                        'endDate' => endDate
+                    };
+                    if (!emailToBatchEnrollments.containsKey(emailToLower)) {
+                        emailToBatchEnrollments.put(emailToLower, new List<Map<String, Object>>());
+                    }
+                    emailToBatchEnrollments.get(emailToLower).add(batchEnr);
+                    
                     Enrollment__c enrollment = new Enrollment__c(
                         Name = enrollmentName,
                         Student__c = null, // Will be set after contact operations
@@ -390,7 +501,9 @@ public with sharing class EnrollmentImporterController {
                         'contactId' => null, // Will be set after DML
                         'enrollmentId' => null, // Will be set after DML
                         'compositeKey' => email + '|' + salesforceProgramId, // Store the composite key
-                        'programId' => salesforceProgramId // Store the Salesforce Program ID
+                        'programId' => salesforceProgramId, // Store the Salesforce Program ID
+                        'originalProgramId' => rowData.get('program id'),
+                        'programName' => programToNameMap.get(rowData.get('program id'))
                     });
                     
                 } catch (Exception e) {
@@ -407,7 +520,9 @@ public with sharing class EnrollmentImporterController {
                         'lastName' => rowData.get('last name'),
                         'email' => rowData.get('email'),
                         'contactId' => null,
-                        'enrollmentId' => null
+                        'enrollmentId' => null,
+                        'originalProgramId' => rowData.get('program id'),
+                        'programName' => programToNameMap.get(rowData.get('program id'))
                     });
                 }
             }
@@ -621,12 +736,14 @@ public with sharing class EnrollmentImporterController {
             List<Map<String, Object>> results = processCSV(contentVersionId);
             
             // Create CSV content with detailed headers
-            String csvContent = 'Row Number,First Name,Last Name,Email,Status,Message,Contact ID,Enrollment ID\n';
+            String csvContent = 'Row Number,First Name,Last Name,Email,Program ID,Program Name,Status,Message,Contact ID,Enrollment ID\n';
             for (Map<String, Object> result : results) {
                 csvContent += result.get('rowNumber') + ',' + 
                             escapeCsvField(String.valueOf(result.get('firstName'))) + ',' +
                             escapeCsvField(String.valueOf(result.get('lastName'))) + ',' +
                             escapeCsvField(String.valueOf(result.get('email'))) + ',' +
+                            escapeCsvField(String.valueOf(result.get('originalProgramId'))) + ',' +
+                            escapeCsvField(String.valueOf(result.get('programName'))) + ',' +
                             escapeCsvField(String.valueOf(result.get('status'))) + ',' +
                             escapeCsvField(String.valueOf(result.get('message'))) + ',' +
                             escapeCsvField(String.valueOf(result.get('contactId'))) + ',' +
