@@ -67,7 +67,7 @@ public with sharing class EnrollmentImporterController {
             List<String> headers = lines[0].split(',');
             
             List<Map<String, Object>> results = new List<Map<String, Object>>();
-            List<Contact> contactsToUpdate = new List<Contact>();
+            Map<Id, Contact> contactsToUpdate = new Map<Id, Contact>();
             List<Contact> contactsToInsert = new List<Contact>();
             List<Enrollment__c> enrollmentsToInsert = new List<Enrollment__c>();
             List<Integer> successfulResultIndices = new List<Integer>();  // Track indices of successful results
@@ -341,7 +341,7 @@ public with sharing class EnrollmentImporterController {
                         if (String.isNotBlank(jobCorpId)) existingContact.Job_Corp_ID__c = jobCorpId;
                         existingContact.RecordTypeId = '0128c000001iIqGAAU';
                         existingContact.AccountId = siteId;
-                        contactsToUpdate.add(existingContact);
+                        contactsToUpdate.put(existingContact.Id, existingContact);
                     } else {
                         // Create new contact
                         Contact newContact = new Contact(
@@ -543,7 +543,7 @@ public with sharing class EnrollmentImporterController {
             List<Database.SaveResult> enrollmentInsertResults = new List<Database.SaveResult>();
             
             if (!contactsToUpdate.isEmpty()) {
-                contactUpdateResults = Database.update(contactsToUpdate, false);
+                contactUpdateResults = Database.update(contactsToUpdate.values(), false);
             }
             if (!contactsToInsert.isEmpty()) {
                 contactInsertResults = Database.insert(contactsToInsert, false);
