@@ -16,6 +16,8 @@ export default class EnrollmentImporter extends LightningElement {
         { label: 'First Name', fieldName: 'firstName', type: 'text' },
         { label: 'Last Name', fieldName: 'lastName', type: 'text' },
         { label: 'Email', fieldName: 'email', type: 'text' },
+        { label: 'Program ID', fieldName: 'originalProgramId', type: 'text' },
+        { label: 'Program Name', fieldName: 'programName', type: 'text' },
         { label: 'Status', fieldName: 'status', type: 'text' },
         { label: 'Message', fieldName: 'message', type: 'text' },
         { label: 'Contact ID', fieldName: 'contactId', type: 'text' },
