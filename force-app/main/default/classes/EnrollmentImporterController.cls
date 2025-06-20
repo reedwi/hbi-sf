@@ -262,6 +262,13 @@ public with sharing class EnrollmentImporterController {
                     Date endDate = String.isNotBlank(rowData.get('enrollment end date')) ? 
                                  Date.valueOf(rowData.get('enrollment end date')) : null;
                     
+                    // Debug the date parsing
+                    System.debug(LoggingLevel.INFO, '=== Date Parsing Debug ===');
+                    System.debug(LoggingLevel.INFO, 'Raw start date from CSV: ' + rowData.get('enrollment start date'));
+                    System.debug(LoggingLevel.INFO, 'Raw end date from CSV: ' + rowData.get('enrollment end date'));
+                    System.debug(LoggingLevel.INFO, 'Parsed startDate: ' + startDate);
+                    System.debug(LoggingLevel.INFO, 'Parsed endDate: ' + endDate);
+                    
                     if (endDate != null && endDate < startDate) {
                         throw new EnrollmentException('End date cannot be before start date');
                     }
@@ -503,7 +510,10 @@ public with sharing class EnrollmentImporterController {
                         'compositeKey' => email + '|' + salesforceProgramId, // Store the composite key
                         'programId' => salesforceProgramId, // Store the Salesforce Program ID
                         'originalProgramId' => rowData.get('program id'),
-                        'programName' => programToNameMap.get(rowData.get('program id'))
+                        'programName' => programToNameMap.get(rowData.get('program id')),
+                        'startDate' => startDate,
+                        'endDate' => endDate,
+                        'dismissalReason' => rowData.get('dismissal reason')
                     });
                     
                 } catch (Exception e) {
@@ -598,11 +608,17 @@ public with sharing class EnrollmentImporterController {
                     // Get contact ID
                     Id contactId = compositeKeyToContactIdMap.get(compositeKey);
                     if (contactId != null) {
-                        // Create enrollment
-                        Date startDate = result.get('enrollment start date') != null ? 
-                                      Date.valueOf(result.get('enrollment start date')) : 
-                                      Date.today();
-                                      
+                        // Get the stored dates from the results map
+                        Date startDate = (Date)result.get('startDate');
+                        Date endDate = (Date)result.get('endDate');
+                        String dismissalReason = (String)result.get('dismissalReason');
+                        
+                        // Debug the date retrieval
+                        System.debug(LoggingLevel.INFO, '=== Enrollment Creation Debug ===');
+                        System.debug(LoggingLevel.INFO, 'Email: ' + email);
+                        System.debug(LoggingLevel.INFO, 'Retrieved startDate from results: ' + startDate);
+                        System.debug(LoggingLevel.INFO, 'Retrieved endDate from results: ' + endDate);
+                        
                         Enrollment__c enrollment = new Enrollment__c(
                             Name = String.format('{0} {1} - {2} - {3}', 
                                 new List<String>{
@@ -620,9 +636,8 @@ public with sharing class EnrollmentImporterController {
                             Student__c = contactId,
                             Program__c = programId,
                             Start_Date__c = startDate,
-                            End_Date__c = result.get('enrollment end date') != null ? 
-                                         Date.valueOf(result.get('enrollment end date')) : null,
-                            Dismissal_Reason__c = String.valueOf(result.get('dismissal reason'))
+                            End_Date__c = endDate,
+                            Dismissal_Reason__c = dismissalReason
                         );
                         
                         // Find matching site school
