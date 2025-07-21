@@ -1,0 +1,6 @@
+sf contact id,eto contact id,date earned,certificate type,certificate id,expiration date
+003O500001IzJXNIA3,,2025-01-15,PACT Core,CERT0012345,
+,100037,2025-03-22,PACT Plumbing,CERT0023456,
+003O500001bF4bzIAC,,2025-06-08,PACT Electrical,CERT0034567,
+,100052,2025-09-14,PACT Core,CERT0045678,2026-09-14
+,100058,2025-11-30,PACT Plumbing,CERT0056789,2026-11-30 
