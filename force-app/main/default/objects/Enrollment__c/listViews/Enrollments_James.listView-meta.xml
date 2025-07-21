@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Enrollments_James</fullName>
+    <columns>NAME</columns>
+    <columns>Student__c</columns>
+    <columns>Program__c</columns>
+    <columns>Program_Type__c</columns>
+    <columns>Site__c</columns>
+    <columns>Site_Site_School__c</columns>
+    <columns>Start_Date__c</columns>
+    <columns>End_Date__c</columns>
+    <columns>Dismissal_Reason__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Site__c</field>
+        <operation>equals</operation>
+        <value>Orlando Academy</value>
+    </filters>
+    <label>Orlando Academy Enrollments</label>
+</ListView>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>End_Date_must_be_Today_or_Earlier</fullName>
+    <active>true</active>
+    <description>End Date cannot be in the future. Please enter today’s date or earlier.</description>
+    <errorConditionFormula>AND(
+    NOT(ISBLANK(End_Date__c)),
+    End_Date__c &gt; TODAY()
+)</errorConditionFormula>
+    <errorDisplayField>End_Date__c</errorDisplayField>
+    <errorMessage>End Date cannot be in the future. Please enter today’s date or earlier or wait until the day the dismissal actually occurs</errorMessage>
+</ValidationRule>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Enrollment_View_Test</fullName>
+    <columns>Program_Type__c</columns>
+    <columns>Site__c</columns>
+    <columns>Program__c</columns>
+    <columns>Student__c</columns>
+    <columns>Start_Date__c</columns>
+    <columns>End_Date__c</columns>
+    <columns>Dismissal_Reason__c</columns>
+    <columns>Site_Site_School__c</columns>
+    <columns>NAME</columns>
+    <filterScope>Everything</filterScope>
+    <label>Enrollment View Test</label>
+</ListView>
